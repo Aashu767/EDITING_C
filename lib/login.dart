@@ -207,6 +207,7 @@
 import 'package:editing_c/model.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:xml2json/xml2json.dart';
 import 'package:http/http.dart' as http;
 
 // class login extends StatefulWidget {
@@ -278,7 +279,8 @@ class login extends StatefulWidget {
 }
 
 class _loginState extends State<login> {
-  bool isLoading = false;
+  bool isLoading = true;
+
   List<MenuModel> dataList = [];
 
   @override
@@ -287,51 +289,43 @@ class _loginState extends State<login> {
     fetchData();
   }
 
-  Future<void> fetchData() async {
-    // Define your request body here
-    Map<String, dynamic> requestBody = {
-      'menuId': 'Menu_Id',
-      'menuName': 'Menu_Name',
-      'count': 'Count',
-    };
-
+  fetchData() async {
     final response = await http.post(
-      Uri.parse(
-          'http://140.238.162.89/ServiceWebAPI/Service.asmx/Ws_Get_All_MenuLinks'),
-      body: {
-        "UserID": "1192",
-      },
-      headers: {'Content-Type': 'application/json'},
-    );
-
+        Uri.parse(
+            'http://140.238.162.89/ServiceWebAPI/Service.asmx/Ws_Get_All_MenuLinks'),
+        body: {
+          "UserID": "1192",
+        },
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded"
+        });
     var bodyIs = response.body;
-    print(bodyIs);
-    // var statusCode = response.statusCode;
-    var data = jsonDecode(response.body);
-    // print(data);
+    var statusCode = response.statusCode;
+    if (statusCode == 200) {
+      debugPrint("res is ${response.body}");
+      debugPrint("Status Code is ${response.statusCode}");
 
-    if (response.statusCode == 200) {
-      isLoading = true;
-      for (Map i in data) {
-        dataList.add(MenuModel.fromJson(i));
-      }
-      // for (var i in data) {
-      //   MenuModel menu_model = MenuModel(
-      //     menuId: i["Menu_Id"],
-      //     menuName: i["Menu_Name"],
-      //     count: i["Count"],
-      //   );
-      //   isLoading = true;
-      //   dataList.add(menu_model);
-      // }
-      // final jsonData = json.decode(response.body);
-      // setState(() {
-      //   isLoading = true;
-      //   // Assuming your API response is a list of strings
-      //   var data = json.decode(response.body);
-      // });
+      Xml2Json xml2Json = Xml2Json();
+
+      xml2Json.parse(bodyIs);
+      var jsonString = xml2Json.toParker();
+      var data = jsonDecode(jsonString);
+      var complaintObject = data['string'];
+      // complaintObject = complaintObject.toString().replaceAll([/r/n]\\r\\\\n, "\n");
+      complaintObject = complaintObject.toString().replaceAll('\r\n', '\n');
+
+      var object = json.decode(complaintObject.toString());
+      setState(() {
+        object.forEach((v) {
+          dataList.add(MenuModel.fromJson(v));
+        });
+        isLoading = false;
+      });
     } else {
-      throw Exception('Failed to load data');
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -342,20 +336,22 @@ class _loginState extends State<login> {
         title: const Text('API Data List'),
         centerTitle: true,
       ),
-      body: !isLoading
+      body: isLoading
           ? const Center(
               child: CircularProgressIndicator(),
             )
-          : ListView.builder(
-              itemCount: dataList.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                    title: Center(
-                  child: Text(dataList[index].menuDetails.toString()),
-                  // child: Text('${dataList['Menu_Details'][index]['Menu_Id']}')),
-                ));
-              },
-            ),
+          : dataList.isEmpty
+              ? const Center(child: Text('Data not found'))
+              : ListView.builder(
+                  itemCount: dataList.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                        title: Center(
+                      child: Text(dataList[index].menuId.toString()),
+                      // child: Text('${dataList['Menu_Details'][index]['Menu_Id']}')),
+                    ));
+                  },
+                ),
     );
   }
 }
