@@ -351,7 +351,7 @@ class _loginState extends State<login> {
               itemBuilder: (context, index) {
                 return ListTile(
                     title: Center(
-                  child: Text(dataList[index].menuId.toString()),
+                  child: Text(dataList[index].menuDetails.toString()),
                   // child: Text('${dataList['Menu_Details'][index]['Menu_Id']}')),
                 ));
               },
